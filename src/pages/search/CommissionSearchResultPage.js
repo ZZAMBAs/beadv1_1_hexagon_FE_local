@@ -661,13 +661,13 @@ const CommissionSearchResultPage = () => {
                                     className="font-medium text-gray-800 hover:underline"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        navigate(`/members/${item.memberCode}`);
+                                        navigate(`/member/${item.memberCode}`);
                                     }}
                                     onKeyDown={(e) => {
                                         // 카드의 onKeyDown으로 이벤트가 올라가는 것도 막아줌
                                         e.stopPropagation();
                                         if (e.key === "Enter" || e.key === " ") {
-                                            navigate(`/members/${item.memberCode}`);
+                                            navigate(`/member/${item.memberCode}`);
                                         }
                                     }}
                                 >

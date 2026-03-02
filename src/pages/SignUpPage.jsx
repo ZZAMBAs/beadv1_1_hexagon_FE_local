@@ -8,7 +8,7 @@ import axios from "axios";
 
 const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
-
+const S3_BASE_URL = process.env.REACT_APP_S3_BASE_URL;
 
 export default function SignUpPage() {
   const navigate = useNavigate();
@@ -122,20 +122,27 @@ export default function SignUpPage() {
       // API: S3 Presigned URL 요청
       // =======================================================
       // TODO: 실제 Presigned URL 요청 API 엔드포인트로 수정해야 합니다.
-      const response = await axios.post("/api/s3/upload-url", {
-        filename: file.name,
-      });
+      const presignedResponse = await api.post("/s3/upload-url", {
+        serviceName: "MEMBERS",
+        fileName: file.name,
+        contentType: file.type,
+      })
 
-      const { presignedUrl, key } = response.data; // API 응답 형식에 맞춰야 합니다.
+      const { key, queryString } = presignedResponse.data.data
+      const presignedUrl = `${S3_BASE_URL}/${key}${queryString}`
+
+      await axios.put(presignedUrl, file, {
+        headers: { "Content-Type": file.type },
+      })
+
+      setFormData((prev) => ({
+        ...prev,
+        profileImageKey: key,
+      }))
 
       // =======================================================
       // API: Presigned URL로 이미지 업로드
       // =======================================================
-      await axios.put(presignedUrl, file, {
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
 
       alert("이미지 업로드가 완료되었습니다.");
 

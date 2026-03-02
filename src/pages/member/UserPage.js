@@ -1,36 +1,47 @@
 // src/pages/user/UserPage.js (예시 경로)
 
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import api from "../../api/api";
 import { Star, Mail, Briefcase, Award } from "lucide-react";
 
 const S3_BASE_URL = process.env.REACT_APP_S3_BASE_URL;
 
 const UserPage = () => {
-  const [memberData, setMemberData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { memberCode } = useParams(); // ⭐ PathVariable
+  const [memberData, setMemberData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const buildS3DownloadUrl = (key, queryString) => {
-    if (!key) return ""
-    return `${S3_BASE_URL}/${key}${queryString ?? ""}`
-  }
+    if (!key) return "";
+    return `${S3_BASE_URL}/${key}${queryString ?? ""}`;
+  };
 
   useEffect(() => {
-    const fetchMyData = async () => {
+    const fetchMemberData = async () => {
       try {
-        const response = await api.get("/members/me")
-        setMemberData(response.data.data)
+        const response = await api.get("/members", {
+          params: {
+            "member-code": memberCode,
+          },
+        });
+        setMemberData(response.data.data);
       } catch (err) {
-        console.error("내 정보 조회 실패:", err)
-        setError("내 정보를 불러오는데 실패했습니다.")
+        console.error("회원 정보 조회 실패:", err);
+        setError("회원 정보를 불러오는데 실패했습니다.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchMyData()
-  }, [])
+    if (memberCode) {
+      fetchMemberData();
+    } else {
+      setError("잘못된 접근입니다.");
+      setLoading(false);
+    }
+  }, [memberCode]);
 
   if (loading) {
     return (

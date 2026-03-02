@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/api";
 
@@ -370,10 +370,10 @@ const PromotionSearchResultPage = () => {
                             key={item.code}
                             role="button"
                             tabIndex={0}
-                            onClick={() => navigate(`/self-promotions/${item.code}`)}
+                            onClick={() => navigate(`/self-promotion/${item.code}`)}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
-                                    navigate(`/self-promotions/${item.code}`);
+                                    navigate(`/self-promotion/${item.code}`);
                                 }
                             }}
                             className="p-5 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -389,12 +389,12 @@ const PromotionSearchResultPage = () => {
                                     className="font-medium text-gray-800 hover:underline"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        navigate(`/members/${item.memberCode}`);
+                                        navigate(`/member/${item.memberCode}`);
                                     }}
                                     onKeyDown={(e) => {
                                         e.stopPropagation();
                                         if (e.key === "Enter" || e.key === " ") {
-                                            navigate(`/members/${item.memberCode}`);
+                                            navigate(`/member/${item.memberCode}`);
                                         }
                                     }}
                                 >
