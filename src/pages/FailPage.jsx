@@ -1,5 +1,4 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
 //import { styles } from '../styles';
 
 export default function FailPage() {

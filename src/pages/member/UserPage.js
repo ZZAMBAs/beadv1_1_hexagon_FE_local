@@ -1,7 +1,6 @@
 // src/pages/user/UserPage.js (예시 경로)
 
 import React, { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
 import api from "../../api/api";
 import { Star, Mail, Briefcase, Award } from "lucide-react";
 
@@ -60,7 +59,7 @@ const UserPage = () => {
   const profileImage = memberData.images?.[0]
   const profileImageUrl = profileImage ? buildS3DownloadUrl(profileImage.key, profileImage.queryString) : null
 
-  const { info, rating, tags, images } = memberData
+  const { info, rating, tags } = memberData
 
 
   return (

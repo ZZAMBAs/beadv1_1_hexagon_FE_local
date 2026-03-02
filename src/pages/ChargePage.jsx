@@ -1,17 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { styles } from "../styles/styles";
 import axios from "axios"; // axios 기본 인스턴스 (인터셉터 우회 목적)
 import { useAuth } from "../components/AuthContext"; // useAuth 훅
-import App from "../App";
 
-const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
 
 // V1 위젯 클라이언트 키
-const widgetClientKey = "test_gck_docs_Ovk5rk1EwkRWBwXLpaerP";
 
 // ==========================================
 // 1. ChargePage (충전 금액 입력 화면 - 스크린샷 UI)

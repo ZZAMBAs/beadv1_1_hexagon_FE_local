@@ -122,7 +122,7 @@ const MyPage = () => {
   const profileImage = memberData.images?.[0]
   const profileImageUrl = profileImage ? buildS3DownloadUrl(profileImage.key, profileImage.queryString) : null
 
-  const { info, rating, tags, images } = memberData
+  const { info, rating, tags } = memberData
 
   return (
       <div className="min-h-screen bg-gray-50 py-10 px-4">

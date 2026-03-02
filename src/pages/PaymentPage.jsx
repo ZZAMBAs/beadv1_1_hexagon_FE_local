@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from "uuid";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const widgetClientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
-const customerKey = uuidv4();
 
 export default function PaymentPage() {
   const location = useLocation(); // navigate로 넘겨준 state 받기
@@ -14,7 +13,6 @@ export default function PaymentPage() {
   const initialPrice = location.state?.price || 0;
 
   const paymentWidgetRef = useRef(null);
-  const paymentMethodsWidgetRef = useRef(null);
   const [price] = useState(initialPrice); // 금액을 변경하지 않고 고정
   const customerKey = useRef(uuidv4());
 
@@ -34,7 +32,7 @@ export default function PaymentPage() {
           customerKey.current
         );
 
-        const paymentMethodsWidget = paymentWidget.renderPaymentMethods(
+        paymentWidget.renderPaymentMethods(
           "#payment-widget",
           price
         );
@@ -42,7 +40,6 @@ export default function PaymentPage() {
         paymentWidget.renderAgreement("#agreement");
 
         paymentWidgetRef.current = paymentWidget;
-        paymentMethodsWidgetRef.current = paymentMethodsWidget;
       } catch (error) {
         console.error("Error loading payment widget:", error);
       }

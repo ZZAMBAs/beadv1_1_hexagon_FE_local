@@ -136,31 +136,6 @@ const CommissionSearchResultPage = () => {
     };
 
     // ===== 10) 검색 결과 API 의존성 키 =====
-    const depsKey = useMemo(() => {
-        return [
-            query,
-            scope,
-            tagsRaw,
-            paymentType,
-            minPay,
-            startedAt,
-            endedAt,
-            openStatus,
-            currentPage,
-            safeSize,
-        ].join("|");
-    }, [
-        query,
-        scope,
-        tagsRaw,
-        paymentType,
-        minPay,
-        startedAt,
-        endedAt,
-        openStatus,
-        currentPage,
-        safeSize,
-    ]);
 
     // ===== 11) 검색 결과 API 호출 =====
     useEffect(() => {
@@ -197,7 +172,18 @@ const CommissionSearchResultPage = () => {
 
         fetch();
         return () => controller.abort();
-    }, [depsKey]);
+    }, [
+        currentPage,
+        endedAt,
+        minPay,
+        openStatus,
+        paymentType,
+        query,
+        safeSize,
+        scope,
+        startedAt,
+        tagsRaw,
+    ]);
 
     // ============================================================
     // ✅ 12) 키워드 추천 API 호출
@@ -648,10 +634,16 @@ const CommissionSearchResultPage = () => {
                             key={item.code}
                             role="button"
                             tabIndex={0}
-                            onClick={() => navigate(`/commissions/${item.code}`)}
+                            onClick={() =>
+                                navigate(`/commissions/${item.code}`, {
+                                    state: { commission: item },
+                                })
+                            }
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
-                                    navigate(`/commissions/${item.code}`);
+                                    navigate(`/commissions/${item.code}`, {
+                                        state: { commission: item },
+                                    });
                                 }
                             }}
                             className="p-5 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300"

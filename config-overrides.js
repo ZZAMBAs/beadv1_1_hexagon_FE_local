@@ -10,6 +10,7 @@ module.exports = function override(config) {
         process: require.resolve('process/browser'),
         buffer: require.resolve('buffer/'),
         path: require.resolve('path-browserify'),
+        vm: false,
         fs: false, // 파일 시스템은 브라우저에서 사용할 수 없으므로 false
     };
 

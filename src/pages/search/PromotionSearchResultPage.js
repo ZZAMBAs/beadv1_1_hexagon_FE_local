@@ -98,9 +98,6 @@ const PromotionSearchResultPage = () => {
     };
 
     // ✅ 의존성 안정화
-    const depsKey = useMemo(() => {
-        return [query, scope, paymentType, maxPay, currentPage, safeSize].join("|");
-    }, [query, scope, paymentType, maxPay, currentPage, safeSize]);
 
     // ✅ API 호출 (검색 결과)
     useEffect(() => {
@@ -132,7 +129,7 @@ const PromotionSearchResultPage = () => {
 
         fetchSearchResults();
         return () => controller.abort();
-    }, [depsKey]);
+    }, [currentPage, maxPay, paymentType, query, safeSize, scope]);
 
     // ✅ 추천 검색어 API 호출 (inputQuery 타이핑할 때)
     useEffect(() => {

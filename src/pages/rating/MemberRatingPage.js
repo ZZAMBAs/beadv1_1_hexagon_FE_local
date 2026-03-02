@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/api";
 
@@ -10,7 +10,7 @@ const MemberRatingPage = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchRating = async () => {
+  const fetchRating = useCallback(async () => {
     setLoading(true);
     try {
       // GET /api/ratings/{memberCode}
@@ -21,11 +21,11 @@ const MemberRatingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberCode]);
 
   useEffect(() => {
     fetchRating();
-  }, [memberCode]);
+  }, [fetchRating]);
 
   const handleUpdateRating = async (isSatisfied) => {
     try {

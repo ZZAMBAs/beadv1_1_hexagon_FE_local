@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../components/AuthContext";
 
-const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
 
 const LoginSuccessPage = () => {

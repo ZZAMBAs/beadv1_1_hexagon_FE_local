@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { decode } from "jwt-js-decode";
 import instance from "../api/api";
@@ -9,7 +9,7 @@ const CLAIMS = {
   MEMBER_CODE: "member-code",
   // 백엔드 @Value("${jwt.claims.is-sign}") 값과 일치해야 함
   IS_SIGNED_UP: "is-signed-up",
-  // 역할 클레임이 있다면 추가: ROLE: "role"
+  ROLE: "role",
 };
 
 // 외부 참조용 변수
@@ -32,12 +32,12 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   // 토큰 디코딩 및 상태 설정 함수
-  const decodeAndSetState = (token) => {
+  const decodeAndSetState = useCallback((token) => {
     try {
       const decodedToken = decode(token);
       const memberCode = decodedToken.payload[CLAIMS.MEMBER_CODE];
       const isSignedUp = decodedToken.payload[CLAIMS.IS_SIGNED_UP];
-      // const role = decodedToken.payload[CLAIMS.ROLE]; // 역할 클레임이 있다면
+      const role = decodedToken.payload[CLAIMS.ROLE] || null;
 
       console.log("🛠️ 디코딩된 페이로드:", decodedToken.payload);
       console.log(
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
           isLoggedIn: true,
           memberCode: memberCode,
           isSignedUp: isSignedUp === true || String(isSignedUp) === "true",
-          role: null, // role
+          role,
         });
         return true;
       }
@@ -62,10 +62,10 @@ export const AuthProvider = ({ children }) => {
       console.error("Token decode failed:", e);
     }
     return false;
-  };
+  }, []);
 
   // 로그아웃 처리 함수 (외부/내부 모두 사용 가능)
-  const logout = async (callBackend = true) => {
+  const logout = useCallback(async (callBackend = true) => {
     localStorage.removeItem("accessToken");
     setAuthState(initialAuthState);
 
@@ -79,22 +79,22 @@ export const AuthProvider = ({ children }) => {
       }
     }
     navigate("/login", { replace: true });
-  };
+  }, [navigate]);
 
   // 로그인 처리 (Access Token 저장 및 상태 업데이트)
-  const login = (accessToken) => {
+  const login = useCallback((accessToken) => {
     if (decodeAndSetState(accessToken)) {
       localStorage.setItem("accessToken", accessToken);
     } else {
       logout(false);
     }
-  };
+  }, [decodeAndSetState, logout]);
 
   // 토큰만 업데이트 (인터셉터에서 사용)
-  const updateToken = (accessToken) => {
+  const updateToken = useCallback((accessToken) => {
     decodeAndSetState(accessToken);
     localStorage.setItem("accessToken", accessToken);
-  };
+  }, [decodeAndSetState]);
 
   // 외부 참조 변수 초기화 (Hook 규칙을 준수하며 외부에 함수 제공)
   useEffect(() => {
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }) => {
       decodeAndSetState(token);
     }
     setLoading(false);
-  }, []);
+  }, [decodeAndSetState]);
 
   return (
     <AuthContext.Provider
