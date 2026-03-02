@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { styles } from "../styles/styles";
 
 // Java 서버 주소
-const API_BASE_URL = "http://localhost:8000/api/payments";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export default function SuccessPage() {
     const [searchParams] = useState(new URLSearchParams(window.location.search));
@@ -50,7 +50,7 @@ export default function SuccessPage() {
 
                 // 2. Axios 요청 설정
                 const response = await axios.post(
-                    `${API_BASE_URL}/confirm`,
+                    `${API_BASE_URL}/payments/confirm`,
                     {
                         paymentKey,
                         orderId,

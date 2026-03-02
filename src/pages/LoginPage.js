@@ -1,13 +1,10 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 // 상위 폴더(src)의 styles.js에서 loginStyles 가져오기
 import { loginStyles } from "../styles/styles";
 
 const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-
   const handleSocialLogin = (provider) => {
     const oauthUrls = {
       // [수정 1] 주소가 서로 바뀌어 있어서 올바르게 매칭했습니다.

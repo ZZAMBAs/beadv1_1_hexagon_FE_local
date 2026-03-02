@@ -7,6 +7,7 @@ import api from "../api/api";
 import axios from "axios";
 
 const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
+const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
 
 
 export default function SignUpPage() {
@@ -16,11 +17,10 @@ export default function SignUpPage() {
   useEffect(() => {
   if (localStorage.getItem("accessToken")) return;
     const initializeToken = async () => {
-      const TOKEN_URL = "http://localhost:8000/api/auth/reissue";
       const axiosConfig = { withCredentials: true };
 
       try {
-        const res = await axios.post(TOKEN_URL, {}, axiosConfig);
+        const res = await axios.post(REISSUE_URL, {}, axiosConfig);
         const authHeader = res.headers["authorization"];
 
         if (authHeader) {
@@ -164,17 +164,12 @@ export default function SignUpPage() {
       return;
     }
 
-    const axiosConfig = {
-      withCredentials: true, // 쿠키 자동 전송
-    };
-
-
     try {
       // -------------------------------------------------------
       // [Step 1] 쿠키 전송 -> 헤더에서 임시 AccessToken 추출
       // -------------------------------------------------------
       const res1 = await axios.post(
-          `${EC2_DOMAIN}/api/auth/reissue`,
+          REISSUE_URL,
           {},
           {
             withCredentials: true, // 쿠키 포함
