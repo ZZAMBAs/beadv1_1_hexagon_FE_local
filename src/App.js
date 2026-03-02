@@ -65,7 +65,6 @@ function App() {
                 path="/search/commissions"
                 element={<CommissionSearchResultPage />}
               />
-
               <Route
                 path="/search/promotions"
                 element={<PromotionSearchResultPage />}

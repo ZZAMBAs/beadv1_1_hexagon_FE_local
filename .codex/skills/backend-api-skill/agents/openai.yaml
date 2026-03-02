@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend API Skill"
+  short_description: "Implement frontend from live OpenAPI specs"
+  default_prompt: "Use $backend-api-skill to implement frontend code from the currently running backend OpenAPI spec."

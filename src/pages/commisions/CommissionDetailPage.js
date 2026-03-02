@@ -1,374 +1,441 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-    Calendar,
-    User,
-    CreditCard,
-    Tag,
-    FileText,
-    Users,
-    CheckCircle,
-    AlertCircle,
-    ArrowLeft,
-    Zap,
-} from "lucide-react"
+  AlertCircle,
+  Bookmark,
+  Calendar,
+  CheckCircle,
+  CreditCard,
+  FileText,
+  Share2,
+  Tag,
+  User,
+  Users,
+} from "lucide-react";
+import api from "../../api/api";
+import { useAuth } from "../../components/AuthContext";
 
-import api from "../../api/api"
+const normalizePaymentType = (value) => {
+  if (!value) {
+    return "ONE_TIME";
+  }
 
-const mockData = {
-    title: "반응형 쇼핑몰 웹사이트 프론트엔드 개발 의뢰",
-    content: `안녕하세요, 현재 운영 중인 의류 쇼핑몰의 리뉴얼 프로젝트를 함께하실 프리랜서 개발자분을 모집합니다.
+  const upper = String(value).toUpperCase();
+  if (upper === "MONTHLY" || upper === "HOURLY") {
+    return "MONTHLY";
+  }
 
-[주요 업무]
-- Figma 디자인을 바탕으로 React 기반 웹사이트 퍼블리싱 및 개발
-- PC/Mobile 반응형 웹 구현
-- REST API 연동 (로그인, 상품 목록, 장바구니, 결제 등)
+  return "ONE_TIME";
+};
 
-[필수 기술]
-- React.js, TypeScript
-- Tailwind CSS (또는 Styled Components)
-- Git 협업 경험
+const toIsoString = (value) => {
+  if (!value) {
+    return undefined;
+  }
 
-[우대 사항]
-- 쇼핑몰 개발 경험이 있으신 분
-- 퍼포먼스 최적화 경험이 있으신 분
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
 
-[일정]
-- 착수일: 2025년 12월 20일
-- 마감일: 2026년 2월 28일
+  return date.toISOString();
+};
 
-관심 있으신 분들의 많은 지원 바랍니다.`,
-    paymentType: "MONTHLY",
-    unitAmount: 25000,
-    startedAt: "2025-12-20",
-    endedAt: "2026-02-28",
-    recruitmentStatus: "OPEN",
-    writerName: "hong",
-    tagCode: [],
-    plannedHires: 50,
-    selectedCount: 12,
-    eligibleApplicants: 10,
-    appliedCount: 3,
-}
+const toNumber = (value) => {
+  if (typeof value === "number") {
+    return value;
+  }
 
-const CommissionDetail = () => {
-    const { code } = useParams()
-    const navigate = useNavigate()
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
 
-    const [data, setData] = useState(mockData)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
-    const [isAuthor, setIsAuthor] = useState(false)
-    const [role, setRole] = useState("NONE")
+  return undefined;
+};
 
-    useEffect(() => {
-        if (!code) {
-            setError("잘못된 접근입니다 (의뢰 코드가 없습니다).")
-            setLoading(false)
-            return
-        }
-        fetchIsAuthor()
-        fetchRole()
-        fetchCommission()
-    }, [code])
+const normalizeCommission = (raw, fallbackCode) => {
+  if (!raw) {
+    return null;
+  }
 
-    const fetchRole = () => {
-        try {
-            const accessToken = localStorage.getItem("accessToken")
+  return {
+    code: raw.code || raw.commissionCode || fallbackCode || "",
+    title: raw.title || raw.name || "",
+    content: raw.content || raw.body || "",
+    memberCode: raw.memberCode || raw.clientCode || raw.writerCode || "",
+    memberNickname: raw.memberNickname || raw.writerName || raw.clientName || "",
+    startedAt: raw.startedAt || "",
+    endedAt: raw.endedAt || "",
+    paymentType: raw.paymentType || "",
+    payAmount: toNumber(raw.payAmount ?? raw.unitAmount ?? raw.amount),
+    tags: Array.isArray(raw.tags) ? raw.tags : Array.isArray(raw.tagCode) ? raw.tagCode : [],
+    isOpen: typeof raw.isOpen === "boolean" ? raw.isOpen : raw.recruitmentStatus === "OPEN",
+    recruitmentStatus: raw.recruitmentStatus || (raw.isOpen ? "OPEN" : "CLOSED"),
+    plannedHires: raw.plannedHires,
+    selectedCount: raw.selectedCount,
+    eligibleApplicants: raw.eligibleApplicants,
+    appliedCount: raw.appliedCount,
+  };
+};
 
-            if (!accessToken) {
-                console.warn("accessToken이 세션 스토리지에 없습니다.")
-                return null
-            }
+const buildContractDraft = (commission) => {
+  const paymentType = normalizePaymentType(commission.paymentType);
+  const paymentText = paymentType === "MONTHLY" ? "월 단위 결제" : "1회 결제";
+  const amountText =
+    typeof commission.payAmount === "number"
+      ? `${commission.payAmount.toLocaleString()}원`
+      : "미정";
 
-            const payload = accessToken.split(".")[1]
-            const decodedPayload = JSON.parse(atob(payload))
+  return {
+    name: `${commission.title || "의뢰"} 계약`,
+    body: [
+      "[자동 생성 초안]",
+      "",
+      `의뢰명: ${commission.title || "-"}`,
+      `의뢰 코드: ${commission.code || "-"}`,
+      `프로젝트 기간: ${commission.startedAt || "-"} ~ ${commission.endedAt || "-"}`,
+      `결제 방식: ${paymentText}`,
+      `금액: ${amountText}`,
+      "",
+      "원본 의뢰 내용:",
+      commission.content || "-",
+    ].join("\n"),
+  };
+};
 
-            const role = decodedPayload.role
+const formatCurrency = (amount) => {
+  if (typeof amount !== "number") {
+    return "-";
+  }
 
-            console.log(role)
+  return new Intl.NumberFormat("ko-KR", {
+    style: "currency",
+    currency: "KRW",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
-            setRole(role)
-        } catch (error) {
-            console.error("Role 추출 실패:", error)
-            return null
-        }
+const getPaymentLabel = (type) => {
+  const normalized = normalizePaymentType(type);
+  if (normalized === "MONTHLY") {
+    return "월 단위";
+  }
+  return "1회 결제";
+};
+
+const getStatusBadge = (commission) => {
+  const isOpen = typeof commission.isOpen === "boolean"
+    ? commission.isOpen
+    : commission.recruitmentStatus === "OPEN";
+
+  if (isOpen) {
+    return (
+      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-bold flex items-center gap-1">
+        <CheckCircle size={14} /> 모집중
+      </span>
+    );
+  }
+
+  return (
+    <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-sm font-bold flex items-center gap-1">
+      <AlertCircle size={14} /> 마감
+    </span>
+  );
+};
+
+const CommissionDetailPage = () => {
+  const { code } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { authState } = useAuth();
+  const [commission, setCommission] = useState(
+    normalizeCommission(location.state?.commission, code)
+  );
+  const [loading, setLoading] = useState(!location.state?.commission);
+  const [error, setError] = useState("");
+  const [contractSubmitting, setContractSubmitting] = useState(false);
+
+  const hasFreelancerRole =
+    authState.role === "FREELANCER" || authState.role === "BOTH";
+
+  const contractDraft = useMemo(() => {
+    if (!commission) {
+      return null;
     }
+    return buildContractDraft(commission);
+  }, [commission]);
 
-    const fetchIsAuthor = async () => {
-        try {
-            setLoading(true)
-            setError(null)
-            const response = await api.get(`/commissions/exist/${code}`)
-
-            if (response.status === 200) {
-                setIsAuthor(true)
-            }
-        } catch (err) {
-            console.error("데이터 로딩 실패:", err)
-            setIsAuthor(false)
-        } finally {
-            console.log("작성자 여부 확인 성공")
-            console.log(isAuthor)
-        }
+  useEffect(() => {
+    if (!code) {
+      setError("의뢰 코드가 없습니다.");
+      setLoading(false);
+      return;
     }
 
     const fetchCommission = async () => {
-        try {
-            setLoading(true)
-            setError(null)
-
-            const response = await api.get(`/commissions/${code}`)
-
-            const result = response.data.data
-
-            console.log(result)
-
-            setData(result)
-
-            console.log(data)
-        } catch (err) {
-            console.error("데이터 로딩 실패:", err)
-            setError("의뢰 정보를 불러오는 데 실패했습니다.")
-        } finally {
-            setLoading(false)
-            console.log(loading)
+      try {
+        setLoading(true);
+        const response = await api.get(`/commissions/${code}`);
+        const result = response?.data?.data ?? response?.data;
+        setCommission((current) => normalizeCommission(result, code) || current);
+        setError("");
+      } catch (requestError) {
+        if (!location.state?.commission) {
+          const message =
+            requestError?.response?.data?.message ||
+            requestError?.message ||
+            "의뢰 정보를 불러오지 못했습니다.";
+          setError(message);
         }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCommission();
+  }, [code, location.state?.commission]);
+
+  const handleCreateContract = async () => {
+    if (!commission || !authState.memberCode || !contractDraft) {
+      return;
     }
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat("ko-KR", {
-            style: "currency",
-            currency: "KRW",
-        }).format(amount)
+    const payload = {
+      clientCode: commission.memberCode || undefined,
+      freelancerCode: authState.memberCode,
+      commissionCode: commission.code || undefined,
+      startedAt: toIsoString(commission.startedAt),
+      endedAt: toIsoString(commission.endedAt),
+      paymentType: normalizePaymentType(commission.paymentType),
+      unitAmount: commission.payAmount,
+      name: contractDraft.name,
+      body: contractDraft.body,
+    };
+
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === undefined || payload[key] === "") {
+        delete payload[key];
+      }
+    });
+
+    const summary = [
+      "이 의뢰 기준으로 계약을 생성합니다.",
+      "",
+      `계약명: ${contractDraft.name}`,
+      `클라이언트 코드: ${payload.clientCode || "-"}`,
+      `프리랜서 코드: ${payload.freelancerCode || "-"}`,
+      `의뢰 코드: ${payload.commissionCode || "-"}`,
+    ].join("\n");
+
+    if (!window.confirm(summary)) {
+      return;
     }
 
-    const getPaymentLabel = (type) => {
-        const map = {
-            HOURLY: "시급",
-            FIXED: "고정급",
-            FLAT: "건당 지급",
-        }
-        return map[type] || type
-    }
+    try {
+      setContractSubmitting(true);
+      const response = await api.post("/contracts", payload);
+      const createdCode = response?.data?.data?.code;
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case "OPEN":
-            case "RECRUITING":
-                return (
-                    <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold flex items-center gap-1.5">
-            <CheckCircle size={14} /> 모집중
-          </span>
-                )
-            case "CLOSED":
-            case "COMPLETED":
-                return (
-                    <span className="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-full text-sm font-semibold flex items-center gap-1.5">
-            <AlertCircle size={14} /> 마감됨
-          </span>
-                )
-            default:
-                return (
-                    <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">{status}</span>
-                )
-        }
-    }
+      if (createdCode) {
+        navigate(`/mypage/contracts/${createdCode}`);
+        return;
+      }
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-                <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-200 animate-pulse mb-4"></div>
-                    <div className="text-lg font-medium text-slate-600">데이터를 불러오는 중입니다...</div>
-                </div>
-            </div>
-        )
+      navigate("/mypage/contracts");
+    } catch (requestError) {
+      const message =
+        requestError?.response?.data?.message ||
+        requestError?.message ||
+        "계약 생성에 실패했습니다.";
+      window.alert(message);
+    } finally {
+      setContractSubmitting(false);
     }
+  };
 
-    if (error || !data) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 gap-6 px-4">
-                <div className="text-center max-w-md">
-                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                    <div className="text-2xl font-bold text-slate-900 mb-2">{error || "데이터가 없습니다."}</div>
-                    <p className="text-slate-600">요청한 의뢰를 찾을 수 없습니다. 다시 시도해주세요.</p>
-                </div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium flex items-center gap-2"
-                >
-                    <ArrowLeft size={18} />
-                    뒤로 가기
-                </button>
-            </div>
-        )
-    }
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-         
-                {/* Main Card */}
-                <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200">
-                    {/* Header Section with gradient accent */}
-                    <div className="relative p-8 md:p-10 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-slate-800 text-white overflow-hidden">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-xl text-gray-500 font-medium">의뢰 정보를 불러오는 중입니다...</div>
+      </div>
+    );
+  }
 
-                        <div className="relative z-10">
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-                                <div className="flex items-center gap-3">
-                                    {getStatusBadge(data.recruitmentStatus)}
-                                    <span className="text-slate-400 text-xs font-mono">{code}</span>
-                                </div>
+  if (error || !commission) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 gap-4">
+        <div className="text-xl text-red-500 font-bold">{error || "의뢰 정보가 없습니다."}</div>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+        >
+          뒤로 가기
+        </button>
+      </div>
+    );
+  }
 
-                                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
-                                    <div className="flex items-center gap-2">
-                                        <User size={16} />
-                                        <span className="font-medium text-white">{data.writerName}</span>
-                                    </div>
-                                    <div className="h-4 w-px bg-slate-600"></div>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar size={16} />
-                                        <span className="text-sm">
-                      {data.startedAt} ~ {data.endedAt}
-                    </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-2">{data.title}</h1>
-
-                            {/* Tags */}
-                            {data.tagCode && data.tagCode.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                    {data.tagCode.map((tag, idx) => (
-                                        <span
-                                            key={idx}
-                                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-100 border border-emerald-400/30"
-                                        >
-                      <Tag size={12} className="mr-1.5" />
-                                            {tag}
-                    </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Stats Grid - Enhanced design */}
-                    <div className="bg-white border-b border-slate-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-8 md:p-10">
-                            {/* Payment Info */}
-                            <div className="group p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 hover:border-blue-300 hover:shadow-md transition-all">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="p-3 bg-white rounded-lg text-blue-600 shadow-sm border border-blue-100">
-                                        <CreditCard size={24} />
-                                    </div>
-                                    <Zap size={16} className="text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                                <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider mb-2">지급 방식</p>
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-blue-700 font-bold text-lg">{getPaymentLabel(data.paymentType)}</span>
-                                    <span className="text-2xl font-bold text-slate-900">{formatCurrency(data.unitAmount)}</span>
-                                </div>
-                            </div>
-
-                            {/* Recruitment Progress */}
-                            <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="p-3 bg-white rounded-lg text-purple-600 shadow-sm border border-purple-100">
-                                        <Users size={24} />
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider mb-3">총 모집 인원</p>
-                                <div className="text-3xl font-bold text-slate-900">
-                                    {data.plannedHires}
-                                    <span className="text-lg text-slate-500">명</span>
-                                </div>
-                            </div>
-
-                            {/* Applicant Stats */}
-                            <div className="p-6 rounded-xl bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100 hover:border-orange-300 hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="p-3 bg-white rounded-lg text-orange-600 shadow-sm border border-orange-100">
-                                        <FileText size={24} />
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider mb-3">지원 현황</p>
-                                <div className="flex items-center gap-4">
-                                    <div>
-                                        <span className="block text-2xl font-bold text-slate-900">{data.appliedCount}</span>
-                                        <span className="text-xs text-slate-600">지원</span>
-                                    </div>
-                                    <div className="h-8 w-px bg-slate-200"></div>
-                                    <div>
-                                        <span className="block text-2xl font-bold text-emerald-600">{data.eligibleApplicants}</span>
-                                        <span className="text-xs text-slate-600">적격</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Selection Stats */}
-                            <div className="p-6 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 hover:border-emerald-300 hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="p-3 bg-white rounded-lg text-emerald-600 shadow-sm border border-emerald-100">
-                                        <CheckCircle size={24} />
-                                    </div>
-                                </div>
-                                <p className="text-xs text-slate-600 font-semibold uppercase tracking-wider mb-3">선발 완료</p>
-                                <div className="text-3xl font-bold text-slate-900">
-                                    {data.selectedCount}
-                                    <span className="text-lg text-slate-500">명</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="p-8 md:p-10 min-h-[400px] bg-white">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3 pb-4 border-b border-slate-200">
-                            <FileText size={24} className="text-blue-600" />
-                            상세 의뢰 내용
-                        </h2>
-
-                        <div className="prose prose-slate max-w-none text-slate-700 leading-8 whitespace-pre-wrap text-base">
-                            {data.content}
-                        </div>
-                    </div>
-
-                    {/* Footer Action Buttons - sticky with gradient background */}
-                    <div className="p-6 md:p-8 bg-gradient-to-r from-slate-900 to-slate-800 border-t-2 border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 sticky bottom-0">
-                        {isAuthor && (
-                            <button
-                                onClick={() => navigate(`/commissions/${code}/edit`)}
-                                className="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2"
-                            >
-                                <Zap size={18} />
-                                수정하기
-                            </button>
-                        )}
-                        {(role === "FREELANCER" || role === "BOTH") && (
-                            <button
-                                onClick={() => navigate(`/commissions/${code}/apply`)}
-                                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2"
-                            >
-                                <CheckCircle size={18} />
-                                지원하기
-                            </button>
-                        )}
-                        {(role === "NONE" || role === "CLIENT") && (
-                            <button className="w-full sm:w-auto px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors cursor-not-allowed opacity-70">
-                                Freelancer 등록 필요
-                            </button>
-                        )}
-                    </div>
-                </div>
+  return (
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
+        <div className="p-6 md:p-8 border-b border-gray-100 bg-white">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              {getStatusBadge(commission)}
+              <span className="text-gray-400 text-xs font-mono">CODE: {commission.code}</span>
             </div>
-        </div>
-    )
-}
 
-export default CommissionDetail
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-1">
+                <User size={16} />
+                <span className="font-medium text-gray-700">
+                  {commission.memberNickname || "작성자 정보 없음"}
+                </span>
+              </div>
+              <div className="h-4 w-px bg-gray-300" />
+              <div className="flex items-center gap-1">
+                <Calendar size={16} />
+                <span>
+                  {commission.startedAt || "-"} ~ {commission.endedAt || "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-extrabold text-gray-900 leading-tight mb-4">
+            {commission.title || "제목 없음"}
+          </h1>
+
+          {commission.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {commission.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800"
+                >
+                  <Tag size={12} className="mr-1" />
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-50 border-b border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+            <div className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-white rounded-full text-blue-600 shadow-sm border border-gray-100">
+                <CreditCard size={24} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">지급 방식</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-blue-600 font-bold">
+                    {getPaymentLabel(commission.paymentType)}
+                  </span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {formatCurrency(commission.payAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 flex flex-col justify-center">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">모집 인원</p>
+              <div className="flex items-center gap-2">
+                <Users size={20} className="text-gray-400" />
+                <span className="text-2xl font-bold text-gray-900">
+                  {commission.plannedHires ?? "-"}명
+                </span>
+              </div>
+            </div>
+
+            <div className="p-6 flex flex-col justify-center">
+              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">지원 현황</p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <span className="block text-xl font-bold text-gray-900">
+                    {commission.appliedCount ?? "-"}
+                  </span>
+                  <span className="text-xs text-gray-500">지원함</span>
+                </div>
+                <div className="h-8 w-px bg-gray-200" />
+                <div>
+                  <span className="block text-xl font-bold text-blue-600">
+                    {commission.eligibleApplicants ?? "-"}
+                  </span>
+                  <span className="text-xs text-gray-500">적격</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 flex flex-col justify-center bg-blue-50/50">
+              <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">선발 완료</p>
+              <div className="flex items-center gap-2">
+                <CheckCircle size={20} className="text-green-500" />
+                <span className="text-2xl font-bold text-gray-900">
+                  {commission.selectedCount ?? "-"}명
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 md:p-10 min-h-[400px]">
+          <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2 border-b pb-2">
+            <FileText size={20} className="text-gray-500" />
+            의뢰 내용
+          </h3>
+
+          <div className="prose prose-slate max-w-none text-gray-700 leading-8 whitespace-pre-wrap">
+            {commission.content || "의뢰 내용이 없습니다."}
+          </div>
+        </div>
+
+        {hasFreelancerRole && authState.memberCode && (
+          <div className="px-8 pb-2">
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+              <div className="font-semibold mb-2">계약 생성 기본값</div>
+              <div>클라이언트 코드: {commission.memberCode || "-"}</div>
+              <div>프리랜서 코드: {authState.memberCode}</div>
+              <div>계약명 초안: {contractDraft?.name || "-"}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="p-6 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4 sticky bottom-0">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition shadow-sm">
+              <Share2 size={18} /> 공유
+            </button>
+            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition shadow-sm">
+              <Bookmark size={18} /> 스크랩
+            </button>
+          </div>
+
+          {hasFreelancerRole && authState.memberCode ? (
+            <button
+              type="button"
+              onClick={handleCreateContract}
+              disabled={contractSubmitting}
+              className={`w-full sm:w-auto px-10 py-3 text-white text-lg font-bold rounded-lg transition shadow-md flex items-center justify-center gap-2 ${
+                contractSubmitting
+                  ? "bg-indigo-300 cursor-wait"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              {contractSubmitting ? "계약 생성 중..." : "계약하기"}
+            </button>
+          ) : (
+            <div className="w-full sm:w-auto px-6 py-3 text-sm text-gray-500 bg-white border border-gray-200 rounded-lg">
+              프리랜서 또는 BOTH 역할 사용자만 계약을 생성할 수 있습니다.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CommissionDetailPage;
