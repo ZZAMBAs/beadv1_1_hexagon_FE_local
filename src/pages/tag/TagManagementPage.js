@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../../api/api";
+import { getStoredAccessToken } from "../../auth/tokenStorage";
 
 const TagManagementPage = () => {
   const [allTags, setAllTags] = useState([]); // 시스템 전체 태그
@@ -9,7 +10,7 @@ const TagManagementPage = () => {
 
   // X-CODE 가져오기
   const getXCodeHeader = () => {
-    let token = localStorage.getItem("accessToken");
+    let token = getStoredAccessToken();
     if (token && token.startsWith("Bearer "))
       token = token.replace("Bearer ", "");
     return token ? { "X-CODE": token } : {};

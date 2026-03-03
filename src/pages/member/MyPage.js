@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/api";
 import { Star, Mail, Briefcase, Award, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../components/AuthContext";
 import MyPage4 from "./MyPage4";
 const S3_BASE_URL = process.env.REACT_APP_S3_BASE_URL;
 
@@ -13,6 +14,7 @@ const MyPage = () => {
   const [roleToRevoke, setRoleToRevoke] = useState(null);
   const [revoking, setRevoking] = useState(false);
   const navigate = useNavigate();
+  const { updateToken } = useAuth();
 
   const buildS3DownloadUrl = (key, queryString) => {
     if (!key) return "";
@@ -69,18 +71,14 @@ const MyPage = () => {
         reissueRes.headers["authorization"] ||
         reissueRes.headers["Authorization"];
 
-      console.log(authHeader);
-
       if (authHeader) {
         const newAccessToken = authHeader.replace("Bearer ", "");
-        // AuthContext & localStorage 갱신
-        localStorage.setItem("accessToken", newAccessToken);
+        updateToken(newAccessToken);
       } else {
         console.warn("reissue 응답에서 Authorization 헤더를 찾지 못했습니다.");
       }
       setShowConfirmModal(false);
       setRoleToRevoke(null);
-      window.location.reload();
     } catch (err) {
       console.error("역할 해제 실패:", err);
       alert("역할 해제에 실패했습니다.");

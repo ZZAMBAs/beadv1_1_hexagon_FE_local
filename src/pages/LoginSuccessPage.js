@@ -13,13 +13,8 @@ const LoginSuccessPage = () => {
   useEffect(() => {
     const reissueToken = async () => {
       try {
-        // Show loading state
         console.log("Requesting new access token...");
-
-        // Make POST request to /reissue endpoint
         const response = await axios.post(REISSUE_URL, {}, { withCredentials: true });
-
-        // Extract the new access token from the response header
         const newAccessToken = response.headers["authorization"]?.replace("Bearer ", "");
 
         if (!newAccessToken) {
@@ -27,12 +22,7 @@ const LoginSuccessPage = () => {
         }
 
         console.log("Successfully received new access token");
-
-        // Remove old access token and store the new one
-        localStorage.removeItem("accessToken");
         updateToken(newAccessToken);
-
-        // Redirect to root page
         navigate("/", { replace: true });
       } catch (err) {
         console.error("Failed to reissue token:", err);

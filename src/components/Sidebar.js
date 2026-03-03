@@ -1,12 +1,11 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { decode } from "jwt-js-decode";
 
 const Sidebar = ({ open, onClose }) => {
   const navigate = useNavigate();
   const { authState } = useAuth();
-  const { isLoggedIn } = authState;
+  const { isLoggedIn, role } = authState;
 
   useEffect(() => {
     const handler = (e) => {
@@ -15,19 +14,6 @@ const Sidebar = ({ open, onClose }) => {
     if (open) window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
-
-  let role = null; // CLIENT | FREELANCER | BOTH | null
-  if (isLoggedIn) {
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        const { payload } = decode(token);
-        role = payload?.role || null;
-      }
-    } catch {
-      role = null;
-    }
-  }
 
   const handleNavigate = (to) => () => {
     onClose?.();

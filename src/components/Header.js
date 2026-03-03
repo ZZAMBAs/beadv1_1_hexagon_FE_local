@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import api from "../api/api";
 import Sidebar from "./Sidebar";
@@ -9,30 +9,18 @@ const Header = () => {
   const { isLoggedIn } = authState;
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggleSidebar = () => setSidebarOpen((v) => !v);
 
   const handleLogout = async () => {
     try {
-      // Call the backend logout endpoint
-      const response = await api.delete("auth/logout");
-
-      // If successful, remove the accessToken
-      if (response.status === 200) {
-        localStorage.removeItem("accessToken");
-        // Update auth state
-        logout(false); // Pass false to avoid calling the backend again
-        // Redirect to front page
-        navigate("/");
-      }
+      await logout();
     } catch (error) {
       console.error("로그아웃 실패:", error);
     }
   };
 
   useEffect(() => {
-    // Only fetch profile if user is logged in
     if (isLoggedIn) {
       setLoading(true);
       const fetchProfile = async () => {
@@ -46,7 +34,10 @@ const Header = () => {
         }
       };
       fetchProfile();
+      return;
     }
+
+    setProfile(null);
   }, [isLoggedIn]);
 
   return (

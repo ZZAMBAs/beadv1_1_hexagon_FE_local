@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { styles } from "../styles/styles";
+import {
+  clearStoredAccessToken,
+  getStoredAccessToken,
+} from "../auth/tokenStorage";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -28,7 +32,7 @@ export default function SuccessPage() {
       };
 
       try {
-        let token = localStorage.getItem("accessToken");
+        let token = getStoredAccessToken();
 
         if (!token) {
           throw new Error("로그인이 필요합니다. (토큰 없음)");
@@ -61,7 +65,7 @@ export default function SuccessPage() {
         let errorMessage;
 
         if (error.response && error.response.status === 401) {
-          localStorage.removeItem("accessToken");
+          clearStoredAccessToken();
           alert("세션이 만료되었거나 인증 정보가 잘못되었습니다. 다시 로그인해 주세요.");
           navigate("/login", { replace: true });
           return;

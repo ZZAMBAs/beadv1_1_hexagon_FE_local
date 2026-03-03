@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../api/api";
+import { getStoredAccessToken } from "../../auth/tokenStorage";
 
 const formatDateTime = (isoString) => {
   if (!isoString) return "";
@@ -32,7 +33,7 @@ const DepositHistoryPage = () => {
   const [cursor, setCursor] = useState({ code: null, date: null });
 
   const getToken = () => {
-    let token = localStorage.getItem("accessToken");
+    let token = getStoredAccessToken();
     if (!token) return null;
     if (token.startsWith("Bearer ")) token = token.replace("Bearer ", "");
     return token;

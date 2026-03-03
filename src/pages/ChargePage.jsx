@@ -3,17 +3,22 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../components/AuthContext";
 import { styles } from "../styles/styles";
+import { hasStoredAccessToken } from "../auth/tokenStorage";
 
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
 
 function ChargePage() {
   const navigate = useNavigate();
-  const { authState, login } = useAuth();
+  const { authState, login, loading } = useAuth();
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const attemptedReissueRef = useRef(false);
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+
     if (authState.isLoggedIn) {
       setIsLoading(false);
       return;
@@ -24,7 +29,7 @@ function ChargePage() {
       return;
     }
 
-    if (!localStorage.getItem("accessToken")) {
+    if (!hasStoredAccessToken()) {
       attemptedReissueRef.current = true;
 
       const attemptReissue = async () => {
@@ -58,7 +63,7 @@ function ChargePage() {
     } else {
       setIsLoading(false);
     }
-  }, [authState.isLoggedIn, login]);
+  }, [authState.isLoggedIn, loading, login]);
 
   if (isLoading && !authState.isLoggedIn) {
     return (

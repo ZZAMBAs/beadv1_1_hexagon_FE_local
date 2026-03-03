@@ -5,6 +5,8 @@ import { useAuth } from "../components/AuthContext";
 
 import api from "../api/api";
 import axios from "axios";
+import { decodeAccessToken } from "../auth/tokenClaims";
+import { hasStoredAccessToken } from "../auth/tokenStorage";
 
 const EC2_DOMAIN = process.env.REACT_APP_EC2_DOMAIN;
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
@@ -15,7 +17,7 @@ export default function SignUpPage() {
   const { updateToken } = useAuth();
 
   useEffect(() => {
-  if (localStorage.getItem("accessToken")) return;
+  if (hasStoredAccessToken()) return;
     const initializeToken = async () => {
       const axiosConfig = { withCredentials: true };
 
@@ -25,13 +27,10 @@ export default function SignUpPage() {
 
         if (authHeader) {
           const accessToken = authHeader.replace("Bearer ", "");
-          const base64Payload = accessToken.split(".")[1];
-          const decodedPayload = JSON.parse(atob(base64Payload));
-          const memberCode = decodedPayload["member-code"];
+          const memberCode = decodeAccessToken(accessToken)["member-code"];
 
           console.log("페이지 로드 시 토큰 초기화 완료:", memberCode);
           updateToken(accessToken);
-          localStorage.setItem("accessToken", accessToken);
         }
       } catch (error) {
         console.warn("토큰 reissue 실패 (임시 계정 아님):", error);
@@ -190,14 +189,7 @@ export default function SignUpPage() {
 
       const tempAccessToken = authHeader.replace("Bearer ", "");
 
-      // -------------------------------------------------------
-      // [Step 2] 토큰(tempAccessToken)에서 member-code 직접 추출 로직
-      // -------------------------------------------------------
-      const base64Payload = tempAccessToken.split(".")[1]; // 페이로드 부분 추출
-      const decodedPayload = JSON.parse(atob(base64Payload)); // Base64 디코딩
-
-      // yml 설정에서 claims 필드로 지정된 'member-code'를 꺼냅니다.
-      const rawMemberCode = decodedPayload["member-code"];
+      const rawMemberCode = decodeAccessToken(tempAccessToken)["member-code"];
 
       console.log("토큰에서 추출된 멤버 코드:", rawMemberCode);
 
@@ -234,7 +226,6 @@ export default function SignUpPage() {
       // [Final] 토큰 저장 및 이동
       // -------------------------------------------------------
       updateToken(finalAccessToken);
-      localStorage.setItem("accessToken", finalAccessToken);
 
       alert("회원가입이 성공적으로 완료되었습니다!");
       navigate("/charge", { replace: true });

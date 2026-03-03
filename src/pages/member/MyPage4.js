@@ -4,13 +4,12 @@ import TagManagementPage from "../tag/TagManagementPage";
 import MyPromotionPage from "../selfPromotion/MySelfPromotionPage";
 import RatingComponent from "../rating/RatingComponent";
 import { User, FileText, Hash, Megaphone } from "lucide-react";
+import { useAuth } from "../../components/AuthContext";
 
 const MyPage4 = () => {
   const [activeTab, setActiveTab] = useState("resume");
-
-  // 현재 로그인한 사용자 정보 (Rating 연동용)
-  // 실제로는 AuthContext나 localStorage에서 가져온 본인의 memberCode가 들어갑니다.
-  const myMemberCode = localStorage.getItem("memberCode");
+  const { authState } = useAuth();
+  const myMemberCode = authState.memberCode;
 
   const tabs = [
     {

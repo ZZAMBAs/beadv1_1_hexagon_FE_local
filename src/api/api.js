@@ -1,5 +1,9 @@
 import axios from "axios";
-import { getAuthService } from "../components/AuthContext";
+import { getAuthService } from "../auth/authService";
+import {
+  clearStoredAccessToken,
+  getStoredAccessToken,
+} from "../auth/tokenStorage";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const REISSUE_URL = process.env.REACT_APP_REISSUE_URL;
@@ -25,7 +29,7 @@ const processQueue = (error, token = null) => {
 
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    const token = getStoredAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,7 +44,7 @@ instance.interceptors.response.use(
     const originalRequest = error.config;
     const authService = getAuthService();
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (
         originalRequest.url === "/members" &&
         originalRequest.method === "post"
@@ -48,9 +52,10 @@ instance.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      if (originalRequest.url === "/api/auth/reissue") {
+      if (originalRequest.url?.includes("/auth/reissue")) {
         if (error.response?.data?.customErrorCode === "UNAUTHORIZATION") {
-          authService.logout(false);
+          clearStoredAccessToken();
+          authService?.logout(false);
         }
         return Promise.reject(error);
       }
@@ -83,14 +88,20 @@ instance.interceptors.response.use(
           throw new Error("Access token was not included in the reissue response.");
         }
 
-        authService.updateToken(newAccessToken);
+        const updated = authService?.updateToken(newAccessToken);
+        if (updated === false) {
+          throw new Error("Failed to update auth state from reissued token.");
+        }
         processQueue(null, newAccessToken);
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return instance(originalRequest);
       } catch (reissueError) {
         processQueue(reissueError, null);
-        authService.logout();
+        clearStoredAccessToken();
+        if (authService) {
+          authService.logout();
+        }
         return Promise.reject(reissueError);
       } finally {
         isRefreshing = false;
