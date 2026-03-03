@@ -89,7 +89,7 @@ export default function SignUpPage() {
       // API: 닉네임 중복 확인
       // =======================================================
       // TODO: 실제 닉네임 중복 확인 API 엔드포인트로 수정해야 합니다.
-      await api.get(`/members/check-name?name=${formData.nickname}`);
+      await api.get(`/members/check-name?name=${formData.name}`);
       alert("사용 가능한 닉네임입니다.");
       setIsNicknameChecked(true);
     } catch (error) {
